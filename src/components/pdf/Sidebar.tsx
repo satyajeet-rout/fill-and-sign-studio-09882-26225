@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { FormField } from "../PDFEditor";
 import { toast } from "sonner";
+import { cleanFieldName } from "@/lib/fieldNameUtils";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -158,39 +159,41 @@ export const Sidebar = ({
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {formFields.map((field) => (
-                    <div 
-                      key={field.id} 
-                      id={`field-${field.id}`}
-                      className={`space-y-2 p-3 rounded-lg transition-colors ${
-                        highlightedFieldId === field.id ? 'bg-primary/10 border-2 border-primary' : 'bg-transparent'
-                      }`}
-                    >
-                      <Label className="text-sm font-medium">{field.name}</Label>
-                      {field.type === "text" && (
-                        <Input
-                          value={draftValues[field.id] || ""}
-                          onChange={(e) => handleDraftChange(field.id, e.target.value)}
-                          className="h-9"
-                        />
-                      )}
-                      {field.type === "checkbox" && (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={draftValues[field.id] === "true"}
-                            onChange={(e) =>
-                              handleDraftChange(field.id, e.target.checked.toString())
-                            }
-                            className="w-4 h-4 rounded border-border"
+                  {formFields
+                    .filter(field => !field.name.toLowerCase().includes('barcode'))
+                    .map((field) => (
+                      <div 
+                        key={field.id} 
+                        id={`field-${field.id}`}
+                        className={`space-y-2 p-3 rounded-lg transition-colors ${
+                          highlightedFieldId === field.id ? 'bg-primary/10 border-2 border-primary' : 'bg-transparent'
+                        }`}
+                      >
+                        <Label className="text-sm font-medium">{cleanFieldName(field.name)}</Label>
+                        {field.type === "text" && (
+                          <Input
+                            value={draftValues[field.id] || ""}
+                            onChange={(e) => handleDraftChange(field.id, e.target.value)}
+                            className="h-9"
                           />
-                          <span className="text-sm text-muted-foreground">
-                            Check to agree
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                        {field.type === "checkbox" && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={draftValues[field.id] === "true"}
+                              onChange={(e) =>
+                                handleDraftChange(field.id, e.target.checked.toString())
+                              }
+                              className="w-4 h-4 rounded border-border cursor-pointer"
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              Check to agree
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                 </div>
               )}
             </div>

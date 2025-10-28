@@ -96,7 +96,7 @@ export const PDFViewer = ({
                 .filter(field => field.page === currentPage)
                 .map(field => (
                   <div
-                    key={`${field.id}-${field.value}`}
+                    key={field.id}
                     className="absolute border-2 border-primary/50 bg-white/90 rounded shadow-sm z-40 hover:border-primary transition-colors cursor-pointer"
                     style={{
                       left: field.x,
@@ -117,7 +117,7 @@ export const PDFViewer = ({
                       />
                     )}
                     {field.type === "checkbox" && (
-                      <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={field.value === "true"}

@@ -18,6 +18,11 @@ export async function extractFormFields(file: File, renderedPageWidth?: number):
       const field = fields[i];
       const fieldName = field.getName();
       
+      // Skip barcode fields
+      if (fieldName.toLowerCase().includes('barcode')) {
+        continue;
+      }
+      
       // Get field widgets (visual representations on pages)
       const widgets = (field as any).acroField.getWidgets();
       
