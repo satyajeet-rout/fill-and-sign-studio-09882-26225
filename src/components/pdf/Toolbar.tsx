@@ -1,7 +1,7 @@
 import { Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FormField, Signature } from "../PDFEditor";
+import { FormField, Signature, TextAnnotation } from "../PDFEditor";
 import { savePDF } from "@/lib/pdfUtils";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ interface ToolbarProps {
   pdfFile: File;
   formFields: FormField[];
   signatures: Signature[];
+  textAnnotations: TextAnnotation[];
   onNewFile: () => void;
 }
 
@@ -26,13 +27,14 @@ export const Toolbar = ({
   pdfFile,
   formFields,
   signatures,
+  textAnnotations,
   onNewFile,
 }: ToolbarProps) => {
   const handleSave = async () => {
     const loadingToast = toast.loading("Preparing PDF for download...");
     
     try {
-      await savePDF(pdfFile, formFields, signatures);
+      await savePDF(pdfFile, formFields, signatures, textAnnotations);
       toast.dismiss(loadingToast);
       toast.success("PDF downloaded successfully!");
     } catch (error) {

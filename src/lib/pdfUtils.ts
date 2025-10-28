@@ -1,11 +1,12 @@
-import { PDFDocument, rgb } from "pdf-lib";
-import { FormField, Signature } from "@/components/PDFEditor";
+import { PDFDocument, rgb, PDFFont, StandardFonts } from "pdf-lib";
+import { FormField, Signature, TextAnnotation } from "@/components/PDFEditor";
 import { toast } from "sonner";
 
 export async function savePDF(
   originalFile: File,
   formFields: FormField[],
-  signatures: Signature[]
+  signatures: Signature[],
+  textAnnotations: TextAnnotation[] = []
 ): Promise<void> {
   try {
     // Load the original PDF with lenient parsing options
@@ -22,11 +23,14 @@ export async function savePDF(
       toast.error("This PDF has formatting issues. Trying alternative save method...");
       
       // Fallback: Create a new PDF and try to copy content
-      await savePDFAlternativeMethod(originalFile, formFields, signatures);
+      await savePDFAlternativeMethod(originalFile, formFields, signatures, textAnnotations);
       return;
     }
     const pages = pdfDoc.getPages();
     const form = pdfDoc.getForm();
+    
+    // Embed font for text annotations
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     // Fill form field values
     for (const field of formFields) {
@@ -89,6 +93,40 @@ export async function savePDF(
       }
     }
 
+    // Draw text annotations
+    for (const textAnnotation of textAnnotations) {
+      const page = pages[textAnnotation.page - 1];
+      const { height } = page.getSize();
+
+      try {
+        // Draw yellow background
+        page.drawRectangle({
+          x: textAnnotation.x,
+          y: height - textAnnotation.y - textAnnotation.height,
+          width: textAnnotation.width,
+          height: textAnnotation.height,
+          color: rgb(1, 1, 0.8),
+          opacity: 0.3,
+        });
+
+        // Draw text
+        const lines = textAnnotation.text.split('\n');
+        const lineHeight = textAnnotation.fontSize * 1.2;
+        
+        lines.forEach((line, index) => {
+          page.drawText(line, {
+            x: textAnnotation.x + 5,
+            y: height - textAnnotation.y - (index + 1) * lineHeight - 5,
+            size: textAnnotation.fontSize,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        });
+      } catch (error) {
+        console.error("Failed to add text annotation:", error);
+      }
+    }
+
     // Save the PDF
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
@@ -113,7 +151,8 @@ export async function savePDF(
 async function savePDFAlternativeMethod(
   originalFile: File,
   formFields: FormField[],
-  signatures: Signature[]
+  signatures: Signature[],
+  textAnnotations: TextAnnotation[]
 ): Promise<void> {
   try {
     toast.info("Using alternative save method - this may take a moment...");

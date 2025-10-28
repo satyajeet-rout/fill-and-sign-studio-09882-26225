@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
-import { ChevronRight, Upload, FileText, Check } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, FileText, PenTool, ChevronDown, ChevronUp, Type, ChevronRight, Upload, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { FormField } from "../PDFEditor";
-import { toast } from "sonner";
 import { cleanFieldName } from "@/lib/fieldNameUtils";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { toast } from "sonner";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,6 +20,7 @@ interface SidebarProps {
   formFields: FormField[];
   onFieldUpdate: (id: string, value: string) => void;
   onSignatureAdd: (signatureData: string) => void;
+  onTextAdd: (text: string) => void;
   highlightedFieldId?: string;
 }
 
@@ -23,9 +30,14 @@ export const Sidebar = ({
   formFields,
   onFieldUpdate,
   onSignatureAdd,
+  onTextAdd,
   highlightedFieldId,
 }: SidebarProps) => {
-  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [isSignatureOpen, setIsSignatureOpen] = useState(false);
+  const [isTextOpen, setIsTextOpen] = useState(false);
+  const [textInput, setTextInput] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
 
   // Initialize draft values when form fields change
@@ -51,12 +63,11 @@ export const Sidebar = ({
     const file = e.target.files?.[0];
     if (file) {
       if (file.type.startsWith("image/")) {
-        setSignatureFile(file);
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
             onSignatureAdd(event.target.result as string);
-            toast.success("Signature added! Drag it to position it.");
+            toast.success("Signature added! Drag it to position.");
           }
         };
         reader.readAsDataURL(file);
@@ -64,6 +75,75 @@ export const Sidebar = ({
         toast.error("Please upload an image file");
       }
     }
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDrawing(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const handleClearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleSaveSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Check if canvas is empty
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const isEmpty = !imageData.data.some(channel => channel !== 0);
+    
+    if (isEmpty) {
+      toast.error("Please draw your signature first");
+      return;
+    }
+
+    const signatureData = canvas.toDataURL("image/png");
+    onSignatureAdd(signatureData);
+    handleClearSignature();
+    setIsSignatureOpen(false);
+    toast.success("Signature added! Drag it to position.");
+  };
+
+  const handleAddText = () => {
+    if (!textInput.trim()) {
+      toast.error("Please enter some text");
+      return;
+    }
+    
+    onTextAdd(textInput);
+    setTextInput("");
+    setIsTextOpen(false);
+    toast.success("Text added! Drag it to position.");
   };
 
   const handleApplyValues = () => {
@@ -99,40 +179,135 @@ export const Sidebar = ({
               </Button>
             </div>
 
-            {/* Signature Upload */}
-            <div className="mb-6">
-              <Label className="text-sm font-medium mb-3 block">Add Signature</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleSignatureUpload}
-                  className="hidden"
-                  id="signature-upload"
-                />
-                <label
-                  htmlFor="signature-upload"
-                  className="flex flex-col items-center gap-2 cursor-pointer"
+            {/* Signature Upload Section */}
+            <Collapsible open={isSignatureOpen} onOpenChange={setIsSignatureOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between p-3 h-auto hover:bg-accent/50"
                 >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Upload className="w-6 h-6 text-primary" />
+                  <div className="flex items-center gap-2">
+                    <PenTool className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Add Signature</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    Upload signature image
-                  </span>
-                  {signatureFile && (
-                    <span className="text-xs text-primary font-medium">
-                      {signatureFile.name}
-                    </span>
+                  {isSignatureOpen ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
                   )}
-                </label>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                PNG, JPG, or SVG format
-              </p>
-            </div>
+                </Button>
+              </CollapsibleTrigger>
 
-            <Separator className="my-6" />
+              <CollapsibleContent className="px-4 py-3 space-y-3">
+                {/* Upload Option */}
+                <div className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleSignatureUpload}
+                    className="hidden"
+                    id="signature-upload"
+                  />
+                  <label
+                    htmlFor="signature-upload"
+                    className="flex flex-col items-center gap-2 cursor-pointer"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-primary" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      Upload image
+                    </span>
+                  </label>
+                </div>
+
+                <div className="text-center text-xs text-muted-foreground">or</div>
+
+                {/* Draw Option */}
+                <div className="space-y-2">
+                  <Label className="text-xs">Draw Signature</Label>
+                  <canvas
+                    ref={canvasRef}
+                    width={256}
+                    height={120}
+                    className="border border-border rounded-lg bg-white w-full cursor-crosshair"
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveSignature}
+                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleClearSignature}
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Separator className="my-4" />
+
+            {/* Add Text Section */}
+            <Collapsible open={isTextOpen} onOpenChange={setIsTextOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between p-3 h-auto hover:bg-accent/50"
+                >
+                  <div className="flex items-center gap-2">
+                    <Type className="w-5 h-5 text-primary" />
+                    <span className="font-medium">Add Text</span>
+                  </div>
+                  {isTextOpen ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="px-4 py-3 space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="text-input">Enter Text</Label>
+                  <Textarea
+                    id="text-input"
+                    placeholder="Type your text here..."
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    className="min-h-[100px] resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleAddText}
+                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                  >
+                    Add Text
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setTextInput("")}
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Separator className="my-4" />
 
             {/* Form Fields */}
             <div>

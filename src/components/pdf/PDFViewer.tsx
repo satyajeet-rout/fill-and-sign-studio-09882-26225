@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import { FormField, Signature } from "../PDFEditor";
+import { FormField, Signature, TextAnnotation } from "../PDFEditor";
 import { SignatureOverlay } from "./SignatureOverlay";
+import { TextOverlay } from "./TextOverlay";
 import { Loader2 } from "lucide-react";
 import { extractFormFields } from "@/lib/formFieldExtractor";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -17,10 +18,15 @@ interface PDFViewerProps {
   onLoadSuccess: (numPages: number) => void;
   formFields: FormField[];
   signatures: Signature[];
+  textAnnotations: TextAnnotation[];
   onFieldUpdate: (id: string, value: string) => void;
   onSignatureMove: (id: string, x: number, y: number) => void;
   onSignatureResize: (id: string, width: number, height: number) => void;
   onSignatureDelete: (id: string) => void;
+  onTextMove: (id: string, x: number, y: number) => void;
+  onTextResize: (id: string, width: number, height: number) => void;
+  onTextUpdate: (id: string, text: string) => void;
+  onTextDelete: (id: string) => void;
   onFieldsDetected: (fields: FormField[]) => void;
   onFieldClick?: (id: string) => void;
 }
@@ -32,10 +38,15 @@ export const PDFViewer = ({
   onLoadSuccess,
   formFields,
   signatures,
+  textAnnotations,
   onFieldUpdate,
   onSignatureMove,
   onSignatureResize,
   onSignatureDelete,
+  onTextMove,
+  onTextResize,
+  onTextUpdate,
+  onTextDelete,
   onFieldsDetected,
   onFieldClick,
 }: PDFViewerProps) => {
@@ -64,6 +75,7 @@ export const PDFViewer = ({
   };
 
   const currentPageSignatures = signatures.filter(sig => sig.page === currentPage);
+  const currentPageTexts = textAnnotations.filter(text => text.page === currentPage);
 
   return (
     <div ref={containerRef} className="flex-1 overflow-auto bg-gradient-to-br from-secondary/10 to-transparent p-6">
@@ -139,6 +151,19 @@ export const PDFViewer = ({
                   onMove={onSignatureMove}
                   onResize={onSignatureResize}
                   onDelete={onSignatureDelete}
+                />
+              ))}
+
+              {/* Render text annotations */}
+              {currentPageTexts.map(text => (
+                <TextOverlay
+                  key={text.id}
+                  text={text}
+                  zoom={zoom}
+                  onMove={onTextMove}
+                  onResize={onTextResize}
+                  onUpdate={onTextUpdate}
+                  onDelete={onTextDelete}
                 />
               ))}
             </div>
