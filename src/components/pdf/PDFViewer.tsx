@@ -125,7 +125,7 @@ export const PDFViewer = ({
                         value={field.value || ""}
                         onChange={(e) => onFieldUpdate(field.id, e.target.value)}
                         className="w-full h-full px-2 bg-transparent border-none outline-none text-sm focus:bg-primary/5"
-                        style={{ pointerEvents: 'auto' }}
+                        style={{ pointerEvents: 'auto', fontFamily: '"Courier New", monospace' }}
                       />
                     )}
                     {field.type === "checkbox" && (

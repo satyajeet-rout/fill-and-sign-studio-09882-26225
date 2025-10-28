@@ -97,7 +97,7 @@ const PDFEditor = () => {
     setSignatures(prev => prev.filter(sig => sig.id !== id));
   };
 
-  const handleTextAdd = (text: string) => {
+  const handleTextAdd = (text: string, fontSize: number = 14) => {
     const newText: TextAnnotation = {
       id: `text-${Date.now()}`,
       text,
@@ -105,7 +105,7 @@ const PDFEditor = () => {
       y: 100,
       width: 200,
       height: 40,
-      fontSize: 14,
+      fontSize,
       page: currentPage,
     };
     setTextAnnotations(prev => [...prev, newText]);

@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, PDFFont, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { FormField, Signature, TextAnnotation } from "@/components/PDFEditor";
 import { toast } from "sonner";
 
@@ -30,7 +30,7 @@ export async function savePDF(
     const form = pdfDoc.getForm();
     
     // Embed font for text annotations
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const font = await pdfDoc.embedFont(StandardFonts.Courier);
 
     // Fill form field values
     for (const field of formFields) {
@@ -99,16 +99,6 @@ export async function savePDF(
       const { height } = page.getSize();
 
       try {
-        // Draw yellow background
-        page.drawRectangle({
-          x: textAnnotation.x,
-          y: height - textAnnotation.y - textAnnotation.height,
-          width: textAnnotation.width,
-          height: textAnnotation.height,
-          color: rgb(1, 1, 0.8),
-          opacity: 0.3,
-        });
-
         // Draw text
         const lines = textAnnotation.text.split('\n');
         const lineHeight = textAnnotation.fontSize * 1.2;

@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { FormField } from "../PDFEditor";
 import { cleanFieldName } from "@/lib/fieldNameUtils";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Collapsible,
   CollapsibleContent,
@@ -20,7 +21,7 @@ interface SidebarProps {
   formFields: FormField[];
   onFieldUpdate: (id: string, value: string) => void;
   onSignatureAdd: (signatureData: string) => void;
-  onTextAdd: (text: string) => void;
+  onTextAdd: (text: string, fontSize: number) => void;
   highlightedFieldId?: string;
 }
 
@@ -36,6 +37,7 @@ export const Sidebar = ({
   const [isSignatureOpen, setIsSignatureOpen] = useState(false);
   const [isTextOpen, setIsTextOpen] = useState(false);
   const [textInput, setTextInput] = useState("");
+  const [fontSize, setFontSize] = useState("14");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
@@ -140,7 +142,7 @@ export const Sidebar = ({
       return;
     }
     
-    onTextAdd(textInput);
+    onTextAdd(textInput, parseInt(fontSize));
     setTextInput("");
     setIsTextOpen(false);
     toast.success("Text added! Drag it to position.");
@@ -286,7 +288,28 @@ export const Sidebar = ({
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     className="min-h-[100px] resize-none"
+                    style={{ fontFamily: '"Courier New", monospace' }}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="font-size">Font Size</Label>
+                  <Select value={fontSize} onValueChange={setFontSize}>
+                    <SelectTrigger id="font-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10px</SelectItem>
+                      <SelectItem value="12">12px</SelectItem>
+                      <SelectItem value="14">14px</SelectItem>
+                      <SelectItem value="16">16px</SelectItem>
+                      <SelectItem value="18">18px</SelectItem>
+                      <SelectItem value="20">20px</SelectItem>
+                      <SelectItem value="24">24px</SelectItem>
+                      <SelectItem value="28">28px</SelectItem>
+                      <SelectItem value="32">32px</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex gap-2">

@@ -144,12 +144,13 @@ export const TextOverlay = ({
           className="w-full h-full px-2 py-1 border-2 border-primary rounded bg-white text-foreground resize-none outline-none"
           style={{ 
             fontSize: text.fontSize * zoom,
+            fontFamily: '"Courier New", monospace',
             pointerEvents: 'auto'
           }}
         />
       ) : (
         <div 
-          className="w-full h-full px-2 py-1 bg-yellow-100/90 border border-yellow-300 rounded flex items-center pointer-events-none select-none overflow-hidden"
+          className="w-full h-full px-2 py-1 flex items-center pointer-events-none select-none overflow-hidden"
           onDoubleClick={(e) => {
             e.stopPropagation();
             setIsEditing(true);
@@ -157,7 +158,7 @@ export const TextOverlay = ({
         >
           <div 
             className="w-full break-words"
-            style={{ fontSize: text.fontSize * zoom }}
+            style={{ fontSize: text.fontSize * zoom, fontFamily: '"Courier New", monospace' }}
           >
             {text.text || "Double-click to edit"}
           </div>
