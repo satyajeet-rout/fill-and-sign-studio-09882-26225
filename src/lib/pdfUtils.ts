@@ -65,21 +65,40 @@ export async function savePDF(
       const page = pages[signature.page - 1];
       const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
 
+      console.log("Processing signature:", {
+        id: signature.id,
+        page: signature.page,
+        x: signature.x,
+        y: signature.y,
+        width: signature.width,
+        height: signature.height,
+        pageWidth: signature.pageWidth,
+        pageHeight: signature.pageHeight,
+        pdfPageWidth,
+        pdfPageHeight,
+      });
+
       try {
         // Extract image data from base64
         const imageData = signature.image.split(",")[1];
         const imageBytes = Uint8Array.from(atob(imageData), (c) => c.charCodeAt(0));
 
+        console.log("Image bytes extracted, length:", imageBytes.length);
+
         // Determine image type and embed
         let image;
         if (signature.image.includes("image/png")) {
+          console.log("Embedding as PNG");
           image = await pdfDoc.embedPng(imageBytes);
         } else if (signature.image.includes("image/jpeg") || signature.image.includes("image/jpg")) {
+          console.log("Embedding as JPG");
           image = await pdfDoc.embedJpg(imageBytes);
         } else {
           console.warn("Unsupported image format for signature");
           continue;
         }
+
+        console.log("Image embedded successfully");
 
         // Calculate scale factor between rendered canvas and actual PDF
         const scaleX = signature.pageWidth ? pdfPageWidth / signature.pageWidth : 1;
@@ -91,6 +110,16 @@ export async function savePDF(
         const pdfWidth = signature.width * scaleX;
         const pdfHeight = signature.height * scaleY;
 
+        console.log("Drawing signature at:", {
+          scaleX,
+          scaleY,
+          pdfX,
+          pdfY,
+          finalY: pdfPageHeight - pdfY - pdfHeight,
+          pdfWidth,
+          pdfHeight,
+        });
+
         // Draw the signature image (PDF coordinates start from bottom-left)
         page.drawImage(image, {
           x: pdfX,
@@ -98,8 +127,11 @@ export async function savePDF(
           width: pdfWidth,
           height: pdfHeight,
         });
+
+        console.log("Signature drawn successfully");
       } catch (error) {
         console.error("Failed to embed signature:", error);
+        toast.error(`Failed to add signature: ${error.message}`);
       }
     }
 
@@ -107,6 +139,16 @@ export async function savePDF(
     for (const textAnnotation of textAnnotations) {
       const page = pages[textAnnotation.page - 1];
       const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
+
+      console.log("Processing text annotation:", {
+        id: textAnnotation.id,
+        text: textAnnotation.text,
+        x: textAnnotation.x,
+        y: textAnnotation.y,
+        fontSize: textAnnotation.fontSize,
+        pageWidth: textAnnotation.pageWidth,
+        pageHeight: textAnnotation.pageHeight,
+      });
 
       try {
         // Calculate scale factor between rendered canvas and actual PDF
@@ -117,6 +159,8 @@ export async function savePDF(
         const pdfX = textAnnotation.x * scaleX;
         const pdfY = textAnnotation.y * scaleY;
         const pdfFontSize = textAnnotation.fontSize * scaleY;
+
+        console.log("Text scales:", { scaleX, scaleY, pdfX, pdfY, pdfFontSize });
 
         // Draw text
         const lines = textAnnotation.text.split('\n');
@@ -131,8 +175,11 @@ export async function savePDF(
             color: rgb(0, 0, 0),
           });
         });
+
+        console.log("Text annotation drawn successfully");
       } catch (error) {
         console.error("Failed to add text annotation:", error);
+        toast.error(`Failed to add text: ${error.message}`);
       }
     }
 
