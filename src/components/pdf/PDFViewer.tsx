@@ -5,6 +5,7 @@ import { SignatureOverlay } from "./SignatureOverlay";
 import { TextOverlay } from "./TextOverlay";
 import { Loader2 } from "lucide-react";
 import { extractFormFields } from "@/lib/formFieldExtractor";
+import { Checkbox } from "@/components/ui/checkbox";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -139,11 +140,10 @@ export const PDFViewer = ({
                     )}
                     {field.type === "checkbox" && (
                       <div className="w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={field.value === "true"}
-                          onChange={(e) => onFieldUpdate(field.id, e.target.checked.toString())}
-                          className="w-5 h-5 cursor-pointer"
+                          onCheckedChange={(checked) => onFieldUpdate(field.id, checked.toString())}
+                          className="cursor-pointer"
                           style={{ pointerEvents: 'auto' }}
                         />
                       </div>
