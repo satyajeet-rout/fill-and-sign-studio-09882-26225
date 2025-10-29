@@ -24,6 +24,8 @@ export interface Signature {
   width: number;
   height: number;
   page: number;
+  pageWidth?: number; // Actual PDF page width
+  pageHeight?: number; // Actual PDF page height
 }
 
 export interface TextAnnotation {
@@ -35,6 +37,8 @@ export interface TextAnnotation {
   height: number;
   fontSize: number;
   page: number;
+  pageWidth?: number; // Actual PDF page width
+  pageHeight?: number; // Actual PDF page height
 }
 
 const PDFEditor = () => {
@@ -47,6 +51,7 @@ const PDFEditor = () => {
   const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
+  const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number }>({ width: 612, height: 792 });
 
   const handleFileSelect = (file: File) => {
     setPdfFile(file);
@@ -73,6 +78,8 @@ const PDFEditor = () => {
       width: 200,
       height: 100,
       page: currentPage,
+      pageWidth: pageDimensions.width,
+      pageHeight: pageDimensions.height,
     };
     setSignatures(prev => [...prev, newSignature]);
   };
@@ -107,6 +114,8 @@ const PDFEditor = () => {
       height: 40,
       fontSize,
       page: currentPage,
+      pageWidth: pageDimensions.width,
+      pageHeight: pageDimensions.height,
     };
     setTextAnnotations(prev => [...prev, newText]);
   };
@@ -193,6 +202,7 @@ const PDFEditor = () => {
           onTextDelete={handleTextDelete}
           onFieldsDetected={setFormFields}
           onFieldClick={handleFieldClick}
+          onPageDimensionsDetected={setPageDimensions}
         />
       </div>
     </div>

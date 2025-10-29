@@ -29,6 +29,7 @@ interface PDFViewerProps {
   onTextDelete: (id: string) => void;
   onFieldsDetected: (fields: FormField[]) => void;
   onFieldClick?: (id: string) => void;
+  onPageDimensionsDetected: (dimensions: { width: number; height: number }) => void;
 }
 
 export const PDFViewer = ({
@@ -49,6 +50,7 @@ export const PDFViewer = ({
   onTextDelete,
   onFieldsDetected,
   onFieldClick,
+  onPageDimensionsDetected,
 }: PDFViewerProps) => {
   const [pageWidth, setPageWidth] = useState(800);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,6 +70,13 @@ export const PDFViewer = ({
 
   const handleDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
     onLoadSuccess(numPages);
+    
+    // Get actual PDF page dimensions
+    const loadingTask = pdfjs.getDocument(await file.arrayBuffer());
+    const pdfDoc = await loadingTask.promise;
+    const page = await pdfDoc.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    onPageDimensionsDetected({ width: viewport.width, height: viewport.height });
     
     // Extract actual form fields from the PDF with the rendered page width
     const fields = await extractFormFields(file, pageWidth);

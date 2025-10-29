@@ -63,7 +63,7 @@ export async function savePDF(
     // Embed and draw signatures
     for (const signature of signatures) {
       const page = pages[signature.page - 1];
-      const { height } = page.getSize();
+      const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
 
       try {
         // Extract image data from base64
@@ -81,12 +81,22 @@ export async function savePDF(
           continue;
         }
 
-        // Draw the signature image
+        // Calculate scale factor between rendered canvas and actual PDF
+        const scaleX = signature.pageWidth ? pdfPageWidth / signature.pageWidth : 1;
+        const scaleY = signature.pageHeight ? pdfPageHeight / signature.pageHeight : 1;
+
+        // Convert coordinates from canvas space to PDF space
+        const pdfX = signature.x * scaleX;
+        const pdfY = signature.y * scaleY;
+        const pdfWidth = signature.width * scaleX;
+        const pdfHeight = signature.height * scaleY;
+
+        // Draw the signature image (PDF coordinates start from bottom-left)
         page.drawImage(image, {
-          x: signature.x,
-          y: height - signature.y - signature.height,
-          width: signature.width,
-          height: signature.height,
+          x: pdfX,
+          y: pdfPageHeight - pdfY - pdfHeight,
+          width: pdfWidth,
+          height: pdfHeight,
         });
       } catch (error) {
         console.error("Failed to embed signature:", error);
@@ -96,18 +106,27 @@ export async function savePDF(
     // Draw text annotations
     for (const textAnnotation of textAnnotations) {
       const page = pages[textAnnotation.page - 1];
-      const { height } = page.getSize();
+      const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
 
       try {
+        // Calculate scale factor between rendered canvas and actual PDF
+        const scaleX = textAnnotation.pageWidth ? pdfPageWidth / textAnnotation.pageWidth : 1;
+        const scaleY = textAnnotation.pageHeight ? pdfPageHeight / textAnnotation.pageHeight : 1;
+
+        // Convert coordinates from canvas space to PDF space
+        const pdfX = textAnnotation.x * scaleX;
+        const pdfY = textAnnotation.y * scaleY;
+        const pdfFontSize = textAnnotation.fontSize * scaleY;
+
         // Draw text
         const lines = textAnnotation.text.split('\n');
-        const lineHeight = textAnnotation.fontSize * 1.2;
+        const lineHeight = pdfFontSize * 1.2;
         
         lines.forEach((line, index) => {
           page.drawText(line, {
-            x: textAnnotation.x + 5,
-            y: height - textAnnotation.y - (index + 1) * lineHeight - 5,
-            size: textAnnotation.fontSize,
+            x: pdfX + 5 * scaleX,
+            y: pdfPageHeight - pdfY - (index + 1) * lineHeight - 5 * scaleY,
+            size: pdfFontSize,
             font: font,
             color: rgb(0, 0, 0),
           });
