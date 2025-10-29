@@ -53,15 +53,7 @@ export async function savePDF(
       }
     }
 
-    // Update field appearances and flatten the form to make fields non-editable in the saved PDF
-    try {
-      form.updateFieldAppearances();
-      form.flatten();
-    } catch (error) {
-      console.warn("Could not flatten form, fields will remain editable:", error);
-    }
-
-    // Embed and draw signatures
+    // Embed and draw signatures BEFORE flattening
     for (const signature of signatures) {
       const page = pages[signature.page - 1];
       const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
@@ -182,6 +174,15 @@ export async function savePDF(
         console.error("Failed to add text annotation:", error);
         toast.error(`Failed to add text: ${error.message}`);
       }
+    }
+
+    // Now flatten the form AFTER drawing signatures and text
+    try {
+      form.updateFieldAppearances();
+      form.flatten();
+      console.log("Form flattened successfully");
+    } catch (error) {
+      console.warn("Could not flatten form, fields will remain editable:", error);
     }
 
     // Save the PDF
