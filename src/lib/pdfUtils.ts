@@ -53,8 +53,9 @@ export async function savePDF(
       }
     }
 
-    // Flatten the form to make fields non-editable in the saved PDF
+    // Update field appearances and flatten the form to make fields non-editable in the saved PDF
     try {
+      form.updateFieldAppearances();
       form.flatten();
     } catch (error) {
       console.warn("Could not flatten form, fields will remain editable:", error);
