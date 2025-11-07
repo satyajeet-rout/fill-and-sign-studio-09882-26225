@@ -54,6 +54,7 @@ export const PDFViewer = ({
   onPageDimensionsDetected,
 }: PDFViewerProps) => {
   const [pageWidth, setPageWidth] = useState(800);
+  const [aspectRatio, setAspectRatio] = useState(1.294); // Standard letter ratio as default
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,15 +70,23 @@ export const PDFViewer = ({
     return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
+  // Update page dimensions whenever pageWidth or aspectRatio changes
+  useEffect(() => {
+    const renderedHeight = pageWidth * aspectRatio;
+    onPageDimensionsDetected({ width: pageWidth, height: renderedHeight });
+  }, [pageWidth, aspectRatio, onPageDimensionsDetected]);
+
   const handleDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
     onLoadSuccess(numPages);
     
-    // Get actual PDF page dimensions
+    // Get actual PDF page dimensions to calculate aspect ratio
     const loadingTask = pdfjs.getDocument(await file.arrayBuffer());
     const pdfDoc = await loadingTask.promise;
     const page = await pdfDoc.getPage(1);
     const viewport = page.getViewport({ scale: 1 });
-    onPageDimensionsDetected({ width: viewport.width, height: viewport.height });
+    
+    // Store the aspect ratio for dynamic dimension updates
+    setAspectRatio(viewport.height / viewport.width);
     
     // Extract actual form fields from the PDF with the rendered page width
     const fields = await extractFormFields(file, pageWidth);

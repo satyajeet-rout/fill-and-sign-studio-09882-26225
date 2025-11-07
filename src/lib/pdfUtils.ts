@@ -61,14 +61,14 @@ export async function savePDF(
       console.log("Processing signature:", {
         id: signature.id,
         page: signature.page,
-        x: signature.x,
-        y: signature.y,
-        width: signature.width,
-        height: signature.height,
-        pageWidth: signature.pageWidth,
-        pageHeight: signature.pageHeight,
-        pdfPageWidth,
-        pdfPageHeight,
+        canvasX: signature.x,
+        canvasY: signature.y,
+        canvasWidth: signature.width,
+        canvasHeight: signature.height,
+        storedCanvasPageWidth: signature.pageWidth,
+        storedCanvasPageHeight: signature.pageHeight,
+        actualPdfPageWidth: pdfPageWidth,
+        actualPdfPageHeight: pdfPageHeight,
       });
 
       try {
@@ -93,7 +93,7 @@ export async function savePDF(
 
         console.log("Image embedded successfully");
 
-        // Calculate scale factor between rendered canvas and actual PDF
+        // Calculate scale factor: from rendered canvas space to PDF points
         const scaleX = signature.pageWidth ? pdfPageWidth / signature.pageWidth : 1;
         const scaleY = signature.pageHeight ? pdfPageHeight / signature.pageHeight : 1;
 
@@ -103,14 +103,14 @@ export async function savePDF(
         const pdfWidth = signature.width * scaleX;
         const pdfHeight = signature.height * scaleY;
 
-        console.log("Drawing signature at:", {
+        console.log("Scale and position calculation:", {
           scaleX,
           scaleY,
           pdfX,
           pdfY,
-          finalY: pdfPageHeight - pdfY - pdfHeight,
           pdfWidth,
           pdfHeight,
+          finalY: pdfPageHeight - pdfY - pdfHeight,
         });
 
         // Draw the signature image (PDF coordinates start from bottom-left)
