@@ -358,7 +358,7 @@ export const Sidebar = ({
               ) : (
                 <div className="space-y-4">
                   {formFields
-                    .filter(field => !field.name.toLowerCase().includes('barcode'))
+                    .filter(field => !field.name.toLowerCase().includes('barcode') && field.type !== 'checkbox')
                     .map((field) => (
                       <div 
                         key={field.id} 
@@ -368,28 +368,11 @@ export const Sidebar = ({
                         }`}
                       >
                         <Label className="text-sm font-medium">{cleanFieldName(field.name)}</Label>
-                        {field.type === "text" && (
-                          <Input
-                            value={draftValues[field.id] || ""}
-                            onChange={(e) => handleDraftChange(field.id, e.target.value)}
-                            className="h-9"
-                          />
-                        )}
-                        {field.type === "checkbox" && (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={draftValues[field.id] === "true"}
-                              onChange={(e) =>
-                                handleDraftChange(field.id, e.target.checked.toString())
-                              }
-                              className="w-4 h-4 rounded border-border cursor-pointer"
-                            />
-                            <span className="text-sm text-muted-foreground">
-                              Check to agree
-                            </span>
-                          </div>
-                        )}
+                        <Input
+                          value={draftValues[field.id] || ""}
+                          onChange={(e) => handleDraftChange(field.id, e.target.value)}
+                          className="h-9"
+                        />
                       </div>
                     ))}
                 </div>
