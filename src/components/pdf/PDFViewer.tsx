@@ -124,7 +124,7 @@ export const PDFViewer = ({
               
               {/* Render form fields */}
               {formFields
-                .filter(field => field.page === currentPage)
+                .filter(field => field.page === currentPage && field.type !== "checkbox")
                 .map(field => (
                   <div
                     key={field.id}
