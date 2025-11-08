@@ -151,12 +151,17 @@ export const PDFViewer = ({
                       <div 
                         className="w-full h-full flex items-center justify-center"
                         style={{ pointerEvents: 'auto' }}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newValue = field.value !== "true";
+                          onFieldUpdate(field.id, newValue.toString());
+                        }}
                       >
                         <Checkbox
                           checked={field.value === "true"}
                           onCheckedChange={(checked) => onFieldUpdate(field.id, checked.toString())}
                           className="cursor-pointer"
+                          style={{ pointerEvents: 'auto' }}
                         />
                       </div>
                     )}
