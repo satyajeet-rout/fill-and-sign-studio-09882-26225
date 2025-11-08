@@ -150,6 +150,7 @@ export const PDFViewer = ({
                     {field.type === "checkbox" && (
                       <div 
                         className="w-full h-full flex items-center justify-center"
+                        style={{ pointerEvents: 'auto' }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
