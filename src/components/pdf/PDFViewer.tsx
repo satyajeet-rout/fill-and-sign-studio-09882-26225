@@ -148,7 +148,10 @@ export const PDFViewer = ({
                       />
                     )}
                     {field.type === "checkbox" && (
-                      <div className="w-full h-full flex items-center justify-center">
+                      <div 
+                        className="w-full h-full flex items-center justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Checkbox
                           checked={field.value === "true"}
                           onCheckedChange={(checked) => onFieldUpdate(field.id, checked.toString())}
