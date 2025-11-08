@@ -136,7 +136,12 @@ export const PDFViewer = ({
                       height: field.height,
                       pointerEvents: 'auto',
                     }}
-                    onClick={() => onFieldClick?.(field.id)}
+                    onClick={(e) => {
+                      // Don't trigger field click for checkboxes (they handle their own clicks)
+                      if (field.type !== "checkbox") {
+                        onFieldClick?.(field.id);
+                      }
+                    }}
                   >
                     {field.type === "text" && (
                       <input
