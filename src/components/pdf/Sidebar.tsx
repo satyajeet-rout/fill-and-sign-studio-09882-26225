@@ -367,10 +367,14 @@ export const Sidebar = ({
                           highlightedFieldId === field.id ? 'bg-primary/10 border-2 border-primary' : 'bg-transparent'
                         }`}
                       >
-                        <Label className="text-sm font-medium">{cleanFieldName(field.name)}</Label>
+                        <Label className="text-sm font-medium">
+                          {cleanFieldName(field.name)}
+                          {field.maxLength && <span className="text-muted-foreground ml-1">({field.maxLength} chars)</span>}
+                        </Label>
                         <Input
                           value={draftValues[field.id] || ""}
                           onChange={(e) => handleDraftChange(field.id, e.target.value)}
+                          maxLength={field.maxLength}
                           className="h-9"
                         />
                       </div>

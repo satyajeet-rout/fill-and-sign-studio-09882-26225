@@ -148,6 +148,7 @@ export const PDFViewer = ({
                         type="text"
                         value={field.value || ""}
                         onChange={(e) => onFieldUpdate(field.id, e.target.value)}
+                        maxLength={field.maxLength}
                         className="w-full h-full px-2 bg-transparent border-none outline-none text-sm focus:bg-primary/5"
                         style={{ pointerEvents: 'auto', fontFamily: '"Courier New", monospace' }}
                       />

@@ -76,13 +76,19 @@ export async function extractFormFields(file: File, renderedPageWidth?: number):
           fieldType = "text";
         }
 
-        // Get current value
+        // Get current value and maxLength
         let currentValue = "";
+        let maxLength: number | undefined;
         try {
           if (fieldType === "checkbox") {
             currentValue = (field as any).isChecked?.() ? "true" : "false";
           } else if (fieldType === "text") {
             currentValue = (field as any).getText?.() || "";
+            // Try to get maxLength from the text field
+            maxLength = (field as any).getMaxLength?.();
+            if (maxLength === undefined || maxLength <= 0) {
+              maxLength = undefined;
+            }
           }
         } catch (e) {
           // Ignore errors getting values
@@ -98,6 +104,7 @@ export async function extractFormFields(file: File, renderedPageWidth?: number):
           width: width * scaleFactor,
           height: height * scaleFactor,
           page: pageIndex + 1, // Convert to 1-indexed
+          maxLength,
         });
       }
     }
