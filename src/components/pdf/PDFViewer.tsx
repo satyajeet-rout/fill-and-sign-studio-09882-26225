@@ -97,9 +97,9 @@ export const PDFViewer = ({
   const currentPageTexts = textAnnotations.filter(text => text.page === currentPage);
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-auto bg-gradient-to-br from-secondary/10 to-transparent p-6">
+    <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-secondary/10 to-transparent p-6">
       <div className="max-w-5xl mx-auto">
-        <div className="relative bg-white rounded-lg shadow-elegant overflow-hidden">
+        <div className="relative bg-white rounded-lg shadow-elegant overflow-hidden" style={{ overflow: 'hidden' }}>
           <Document
             file={file}
             onLoadSuccess={handleDocumentLoadSuccess}
