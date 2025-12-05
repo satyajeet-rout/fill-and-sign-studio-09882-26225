@@ -14,6 +14,7 @@ export interface FormField {
   width: number;
   height: number;
   page: number;
+  maxLength?: number;
 }
 
 export interface Signature {
