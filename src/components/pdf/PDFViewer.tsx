@@ -114,7 +114,7 @@ export const PDFViewer = ({
               </div>
             }
           >
-            <div className="relative" style={{ pointerEvents: 'none' }}>
+            <div className="relative overflow-hidden" style={{ pointerEvents: 'none' }}>
               <Page
                 pageNumber={currentPage}
                 width={pageWidth * zoom}
