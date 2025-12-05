@@ -136,7 +136,7 @@ export const SignatureOverlay = ({
       <img
         src={signature.image}
         alt="Signature"
-        className="w-full h-full object-fill pointer-events-none select-none"
+        className="w-full h-full object-contain pointer-events-none select-none"
         draggable={false}
       />
 

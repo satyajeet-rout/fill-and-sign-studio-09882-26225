@@ -70,18 +70,28 @@ const PDFEditor = () => {
   };
 
   const handleSignatureAdd = (signatureData: string) => {
-    const newSignature: Signature = {
-      id: `sig-${Date.now()}`,
-      image: signatureData,
-      x: 100,
-      y: 100,
-      width: 200,
-      height: 100,
-      page: currentPage,
-      pageWidth: pageDimensions.width,
-      pageHeight: pageDimensions.height,
+    // Load image to get natural dimensions and calculate proper aspect ratio
+    const img = new Image();
+    img.onload = () => {
+      const maxWidth = 200;
+      const aspectRatio = img.naturalHeight / img.naturalWidth;
+      const width = maxWidth;
+      const height = maxWidth * aspectRatio;
+      
+      const newSignature: Signature = {
+        id: `sig-${Date.now()}`,
+        image: signatureData,
+        x: 100,
+        y: 100,
+        width,
+        height,
+        page: currentPage,
+        pageWidth: pageDimensions.width,
+        pageHeight: pageDimensions.height,
+      };
+      setSignatures(prev => [...prev, newSignature]);
     };
-    setSignatures(prev => [...prev, newSignature]);
+    img.src = signatureData;
   };
 
   const handleSignatureMove = (id: string, x: number, y: number) => {
