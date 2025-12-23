@@ -1,8 +1,12 @@
-import { useState } from "react";
-import { FileUpload } from "./pdf/FileUpload";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { exportFilledPdf } from "@/lib/pdfUtils";
 import { PDFViewer } from "./pdf/PDFViewer";
 import { Sidebar } from "./pdf/Sidebar";
 import { Toolbar } from "./pdf/Toolbar";
+import { ChatPanel as FloatingChatPanel } from "./pdf/ChatPanel";
+import { toast } from "sonner";
+import { cleanFieldName } from "@/lib/fieldNameUtils";
 
 export interface FormField {
   id: string;
@@ -53,6 +57,8 @@ const PDFEditor = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [highlightedFieldId, setHighlightedFieldId] = useState<string | undefined>();
   const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number }>({ width: 612, height: 792 });
+  
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const handleFileSelect = (file: File) => {
     setPdfFile(file);
@@ -165,9 +171,157 @@ const PDFEditor = () => {
     setTimeout(() => setHighlightedFieldId(undefined), 2000);
   };
 
-  if (!pdfFile) {
-    return <FileUpload onFileSelect={handleFileSelect} />;
-  }
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Try to load a file passed from the upload page via location.state.fileUrl
+    const state: any = (location && (location as any).state) || {};
+    if (!pdfFile) {
+      if (state.fileUrl) {
+        fetch(state.fileUrl)
+          .then(res => res.blob())
+          .then(blob => {
+            const file = new File([blob], 'uploaded.pdf', { type: 'application/pdf' });
+            setPdfFile(file);
+            setCurrentPage(1);
+          })
+          .catch(err => {
+            console.error('Failed to load PDF from upload page state', err);
+            navigate('/');
+          });
+      } else {
+        // No file provided — redirect back to upload/home
+        navigate('/');
+      }
+    }
+  }, [location, pdfFile, navigate]);
+
+  const handleNext = async () => {
+    if (!pdfFile) return;
+    try {
+      const blob = await exportFilledPdf(pdfFile, formFields, signatures, textAnnotations);
+
+      // Create object URL and store base64 in sessionStorage for persistence
+      const objectUrl = URL.createObjectURL(blob);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        try {
+          sessionStorage.setItem("reviewPdfBase64", base64);
+        } catch (e) {
+          console.warn("Unable to save PDF to sessionStorage", e);
+        }
+
+        navigate("/review-pdf", { state: { objectUrl } });
+      };
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      console.error("Failed to export PDF for review:", error);
+      toast.error("Failed to prepare PDF for review");
+    }
+  };
+
+  const handleLoadDummyData = async () => {
+    try {
+      const response = await fetch("/sample-data/form-fields-dummy.json");
+      if (!response.ok) throw new Error("Failed to load dummy data");
+      const data = await response.json();
+
+      // Update form fields with dummy values
+      setFormFields((prevFields) =>
+        prevFields.map((field) => {
+          const dummyField = data.formFields.find(
+            (df: any) => df.name === field.name || df.label === field.name
+          );
+          return dummyField ? { ...field, value: dummyField.value } : field;
+        })
+      );
+
+      toast.success("✨ Dummy data loaded! All fields are now filled.");
+    } catch (error) {
+      toast.error("Failed to load dummy data");
+      console.error("Error loading dummy data:", error);
+    }
+  };
+
+  const handleApplyField = (sampleName: string, value: string, sampleLabel?: string) => {
+    // Find matching fields by name or cleaned label, then call the id-based updater
+    setFormFields((prevFields) => {
+      const matchedIds: string[] = [];
+      prevFields.forEach((field) => {
+        const fieldName = field.name || "";
+        const cleaned = cleanFieldName(fieldName).toLowerCase();
+
+        const nameMatch = fieldName === sampleName || fieldName.toLowerCase() === sampleName.toLowerCase();
+        const labelMatch = sampleLabel && (cleaned === sampleLabel.toLowerCase() || cleaned.includes(sampleLabel.toLowerCase()));
+        const nameIncludes = cleaned.includes(sampleName.toLowerCase());
+
+        if (nameMatch || labelMatch || nameIncludes) {
+          matchedIds.push(field.id);
+        }
+      });
+
+      // If matched, update their values
+      if (matchedIds.length > 0) {
+        matchedIds.forEach((id) => handleFieldUpdate(id, value));
+      }
+
+      // Return prevFields unchanged here because handleFieldUpdate will update state
+      return prevFields;
+    });
+  };
+
+  const handleApplyAllFields = async () => {
+    try {
+      const response = await fetch("/sample-data/form-fields-dummy.json");
+      if (!response.ok) throw new Error("Failed to load dummy data");
+      const data = await response.json();
+
+      // Collect all field updates first
+      const updates: { id: string; value: string }[] = [];
+      const samples: any[] = data.formFields || [];
+
+      // Build updates by matching all samples against current form fields
+      samples.forEach((sample) => {
+        const sampleName = sample.name;
+        const sampleLabel = sample.label;
+        const sampleValue = sample.value;
+
+        // Match in current formFields
+        formFields.forEach((field) => {
+          const fieldName = field.name || "";
+          const cleaned = cleanFieldName(fieldName).toLowerCase();
+
+          const nameMatch = fieldName === sampleName || fieldName.toLowerCase() === sampleName.toLowerCase();
+          const labelMatch = sampleLabel && (cleaned === sampleLabel.toLowerCase() || cleaned.includes(sampleLabel.toLowerCase()));
+          const nameIncludes = cleaned.includes(sampleName.toLowerCase());
+
+          if (nameMatch || labelMatch || nameIncludes) {
+            updates.push({ id: field.id, value: sampleValue });
+          }
+        });
+      });
+
+      // Apply all updates in a single state update
+      setFormFields((prevFields) =>
+        prevFields.map((field) => {
+          const update = updates.find((u) => u.id === field.id);
+          return update ? { ...field, value: update.value } : field;
+        })
+      );
+
+      toast.success("✨ All fields applied successfully!");
+    } catch (error) {
+      toast.error("Failed to apply fields");
+      console.error("Error applying fields:", error);
+    }
+  };
+
+  
+
+  
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-background via-background to-secondary/20">
@@ -179,6 +333,14 @@ const PDFEditor = () => {
         onSignatureAdd={handleSignatureAdd}
         onTextAdd={handleTextAdd}
         highlightedFieldId={highlightedFieldId}
+        currentPage={currentPage}
+      />
+
+      <FloatingChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        formFields={formFields}
+        currentPage={currentPage}
       />
       
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -187,12 +349,15 @@ const PDFEditor = () => {
           numPages={numPages}
           zoom={zoom}
           onPageChange={setCurrentPage}
+          onNext={handleNext}
           onZoomChange={setZoom}
           pdfFile={pdfFile}
           formFields={formFields}
           signatures={signatures}
           textAnnotations={textAnnotations}
           onNewFile={() => setPdfFile(null)}
+          onLoadDummyData={handleLoadDummyData}
+          onChatOpen={() => setIsChatOpen(true)}
         />
         
         <PDFViewer

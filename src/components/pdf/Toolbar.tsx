@@ -1,6 +1,7 @@
-import { Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileUp } from "lucide-react";
+import { Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileUp, Wand2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useNavigate } from "react-router-dom";
 import { FormField, Signature, TextAnnotation } from "../PDFEditor";
 import { savePDF } from "@/lib/pdfUtils";
 import { toast } from "sonner";
@@ -16,6 +17,9 @@ interface ToolbarProps {
   signatures: Signature[];
   textAnnotations: TextAnnotation[];
   onNewFile: () => void;
+  onLoadDummyData?: () => void;
+  onChatOpen?: () => void;
+  onNext?: () => void;
 }
 
 export const Toolbar = ({
@@ -29,7 +33,11 @@ export const Toolbar = ({
   signatures,
   textAnnotations,
   onNewFile,
+  onLoadDummyData,
+  onChatOpen,
+  onNext,
 }: ToolbarProps) => {
+  const navigate = useNavigate();
   const handleSave = async () => {
     const loadingToast = toast.loading("Preparing PDF for download...");
     
@@ -60,13 +68,24 @@ export const Toolbar = ({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => navigate(-1)}
+            className="gap-2 hover:bg-secondary"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onNewFile}
             className="gap-2 hover:bg-secondary"
           >
             <FileUp className="w-4 h-4" />
             New File
           </Button>
-          
+
+          {/* Load Sample Data removed per request */}
           <Separator orientation="vertical" className="h-6" />
 
           {/* Page Navigation */}
@@ -127,14 +146,31 @@ export const Toolbar = ({
           </div>
         </div>
 
-        {/* Save Button */}
-        <Button
-          onClick={handleSave}
-          className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-elegant"
-        >
-          <Download className="w-4 h-4" />
-          Save & Download
-        </Button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => {
+              if (typeof onNext === "function") {
+                onNext();
+                return;
+              }
+              onPageChange(Math.min(numPages, currentPage + 1));
+            }}
+            disabled={currentPage === numPages}
+            className="gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:opacity-90 shadow-elegant text-white"
+          >
+            <ChevronRight className="w-4 h-4" />
+            Preview Form
+          </Button>
+
+          <Button
+            onClick={handleSave}
+            className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-elegant"
+          >
+            <Download className="w-4 h-4" />
+            Save & Download
+          </Button>
+        </div>
       </div>
     </div>
   );

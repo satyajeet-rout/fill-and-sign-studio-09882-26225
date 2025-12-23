@@ -119,22 +119,27 @@ export const PDFViewer = ({
                 pageNumber={currentPage}
                 width={pageWidth * zoom}
                 renderTextLayer={false}
-                renderAnnotationLayer={false}
+                renderAnnotationLayer={true}
               />
               
               {/* Render form fields */}
               {formFields
-                .filter(field => field.page === currentPage && field.type !== "checkbox")
-                .map(field => (
+                .filter(field => field.page === currentPage)
+                .map(field => {
+                  // Ensure minimum visibility
+                  const minWidth = Math.max(field.width, 20);
+                  const minHeight = Math.max(field.height, 20);
+                  
+                  return (
                   <div
                     key={field.id}
                     className="absolute border-2 border-primary/50 bg-white/90 rounded shadow-sm z-40 hover:border-primary transition-colors cursor-pointer"
                     style={{
                       left: field.x,
                       top: field.y,
-                      width: field.width,
-                      height: field.height,
-                      pointerEvents: 'auto',
+                      width: minWidth,
+                      height: minHeight,
+                      pointerEvents: 'none',
                     }}
                     onClick={(e) => {
                       // Don't trigger field click for checkboxes (they handle their own clicks)
@@ -150,29 +155,50 @@ export const PDFViewer = ({
                         onChange={(e) => onFieldUpdate(field.id, e.target.value)}
                         maxLength={field.maxLength}
                         className="w-full h-full px-2 bg-transparent border-none outline-none text-sm focus:bg-primary/5"
-                        style={{ pointerEvents: 'auto', fontFamily: '"Courier New", monospace' }}
+                        style={{ pointerEvents: 'auto', fontFamily: '"Courier New", monospace', color: '#000' }}
+                      />
+                    )}
+                    {field.type === "select" && (
+                      <input
+                        type="text"
+                        value={field.value || ""}
+                        onChange={(e) => onFieldUpdate(field.id, e.target.value)}
+                        className="w-full h-full px-2 bg-transparent border-none outline-none text-sm focus:bg-primary/5"
+                        style={{ pointerEvents: 'auto', fontFamily: '"Courier New", monospace', color: '#000' }}
+                      />
+                    )}
+                    {field.type === "radio" && (
+                      <input
+                        type="text"
+                        value={field.value || ""}
+                        onChange={(e) => onFieldUpdate(field.id, e.target.value)}
+                        className="w-full h-full px-2 bg-transparent border-none outline-none text-sm focus:bg-primary/5"
+                        style={{ pointerEvents: 'auto', fontFamily: '"Courier New", monospace', color: '#000' }}
                       />
                     )}
                     {field.type === "checkbox" && (
                       <div 
                         className="w-full h-full flex items-center justify-center"
                         style={{ pointerEvents: 'auto' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newValue = field.value !== "true";
-                          onFieldUpdate(field.id, newValue.toString());
+                        onClick={() => {
+                          const currentValue = field.value;
+                          onFieldUpdate(field.id, currentValue === "true" ? "false" : "true");
                         }}
                       >
-                        <Checkbox
+                        <input
+                          type="checkbox"
                           checked={field.value === "true"}
-                          onCheckedChange={(checked) => onFieldUpdate(field.id, checked.toString())}
-                          className="cursor-pointer"
-                          style={{ pointerEvents: 'auto' }}
+                          onChange={() => {
+                            const currentValue = field.value;
+                            onFieldUpdate(field.id, currentValue === "true" ? "false" : "true");
+                          }}
+                          className="w-4 h-4 cursor-pointer"
                         />
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
 
               {/* Render signatures */}
               {currentPageSignatures.map(signature => (

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, FileText, PenTool, ChevronDown, ChevronUp, Type, ChevronRight, Upload, Check } from "lucide-react";
+import { X, FileText, PenTool, ChevronDown, ChevronUp, Type, ChevronRight, Upload, Check, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ interface SidebarProps {
   onSignatureAdd: (signatureData: string) => void;
   onTextAdd: (text: string, fontSize: number) => void;
   highlightedFieldId?: string;
+  currentPage: number;
 }
 
 export const Sidebar = ({
@@ -33,59 +34,62 @@ export const Sidebar = ({
   onSignatureAdd,
   onTextAdd,
   highlightedFieldId,
+  currentPage,
 }: SidebarProps) => {
   const [isSignatureOpen, setIsSignatureOpen] = useState(false);
   const [isTextOpen, setIsTextOpen] = useState(false);
   const [textInput, setTextInput] = useState("");
   const [fontSize, setFontSize] = useState("14");
+  const [isLoadingSample, setIsLoadingSample] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
 
-  // Initialize draft values when form fields change
+  // Initialize draft values from formFields
   useEffect(() => {
-    const initialValues: Record<string, string> = {};
-    formFields.forEach(field => {
-      initialValues[field.id] = field.value;
+    const initial: Record<string, string> = {};
+   	formFields.forEach(f => {
+      initial[f.id] = f.value || "";
     });
-    setDraftValues(initialValues);
+    setDraftValues(initial);
   }, [formFields]);
 
-  // Scroll to highlighted field
+  // Auto-scroll to highlighted field
   useEffect(() => {
     if (highlightedFieldId) {
-      const element = document.getElementById(`field-${highlightedFieldId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      const el = document.getElementById(`field-${highlightedFieldId}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [highlightedFieldId]);
 
+  // === Signature Upload ===
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            onSignatureAdd(event.target.result as string);
-            toast.success("Signature added! Drag it to position.");
-          }
-        };
-        reader.readAsDataURL(file);
-      } else {
-        toast.error("Please upload an image file");
-      }
+    if (!file) return;
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        onSignatureAdd(reader.result as string);
+        toast.success("Signature uploaded! Drag to place.");
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast.error("Please upload an image file");
     }
   };
 
+  // === Drawing Signature ===
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#000";
     ctx.beginPath();
     ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
   };
@@ -94,145 +98,209 @@ export const Sidebar = ({
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
     ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
+  const stopDrawing = () => setIsDrawing(false);
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    }
   };
 
-  const handleClearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  };
-
-  const handleSaveSignature = () => {
+  const saveDrawnSignature = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Check if canvas is empty
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const isEmpty = !imageData.data.some(channel => channel !== 0);
-    
+    const isEmpty = imageData.data.every((val, i) => i % 4 === 3 || val === 0);
+
     if (isEmpty) {
-      toast.error("Please draw your signature first");
+      toast.error("Draw your signature first!");
       return;
     }
 
-    const signatureData = canvas.toDataURL("image/png");
-    onSignatureAdd(signatureData);
-    handleClearSignature();
+    onSignatureAdd(canvas.toDataURL("image/png"));
+    clearCanvas();
     setIsSignatureOpen(false);
-    toast.success("Signature added! Drag it to position.");
+    toast.success("Signature added! Drag to place.");
   };
 
+  // === Add Text ===
   const handleAddText = () => {
     if (!textInput.trim()) {
-      toast.error("Please enter some text");
+      toast.error("Enter some text first");
       return;
     }
-    
-    onTextAdd(textInput, parseInt(fontSize));
+    onTextAdd(textInput.trim(), parseInt(fontSize));
     setTextInput("");
     setIsTextOpen(false);
-    toast.success("Text added! Drag it to position.");
+    toast.success("Text added! Drag to place.");
   };
 
+  // === Apply All Draft Values ===
   const handleApplyValues = () => {
     Object.entries(draftValues).forEach(([id, value]) => {
       onFieldUpdate(id, value);
     });
-    toast.success("Form values applied successfully!");
+    toast.success("All values applied to PDF!");
   };
 
   const handleDraftChange = (id: string, value: string) => {
     setDraftValues(prev => ({ ...prev, [id]: value }));
   };
 
+  // === Load Sample Data – FIXED & IMPROVED ===
+  const handleLoadSampleData = async () => {
+    if (isLoadingSample) return;
+    setIsLoadingSample(true);
+
+    try {
+      const response = await fetch("/sample-data/form-fields-dummy.json");
+      if (!response.ok) throw new Error("Failed to fetch sample data");
+
+      const data = await response.json();
+      const samples = data.formFields || [];
+
+      const updates: { id: string; value: string }[] = [];
+      const newDraftValues = { ...draftValues };
+
+      console.log("Loading sample data...", {
+        totalFormFields: formFields.length,
+        totalSamples: samples.length
+      });
+
+      formFields.forEach(field => {
+        const fieldName = (field.name || "").trim();
+        const cleaned = cleanFieldName(fieldName).toLowerCase();
+
+        // Try different matching strategies
+        const match = samples.find((s: any) => {
+          const sName = (s.name || "").toString().toLowerCase().trim();
+          const sLabel = (s.label || "").toString().toLowerCase().trim();
+
+          // Strategy 1: Exact match on original name
+          if (fieldName.toLowerCase() === sName) return true;
+          
+          // Strategy 2: Exact match on label
+          if (fieldName.toLowerCase() === sLabel) return true;
+          
+          // Strategy 3: Cleaned name exact match
+          if (cleaned === sName) return true;
+          if (cleaned === sLabel) return true;
+          
+          // Strategy 4: Contains match
+          if (cleaned.includes(sName) || sName.includes(cleaned)) return true;
+          if (cleaned.includes(sLabel) || sLabel.includes(cleaned)) return true;
+          
+          // Strategy 5: Word-based matching - split by spaces and check if any words match
+          const cleanedWords = cleaned.split(/[\s_-]+/).filter(w => w.length > 0);
+          const sNameWords = sName.split(/[\s_-]+/).filter(w => w.length > 0);
+          const sLabelWords = sLabel.split(/[\s_-]+/).filter(w => w.length > 0);
+          
+          if (cleanedWords.length > 0 && sNameWords.length > 0) {
+            const nameMatch = cleanedWords.some(w => sNameWords.some(sw => w.includes(sw) || sw.includes(w)));
+            if (nameMatch) return true;
+          }
+          
+          if (cleanedWords.length > 0 && sLabelWords.length > 0) {
+            const labelMatch = cleanedWords.some(w => sLabelWords.some(sw => w.includes(sw) || sw.includes(w)));
+            if (labelMatch) return true;
+          }
+
+          return false;
+        });
+
+        if (match?.value != null) {
+          const value = String(match.value).trim();
+          newDraftValues[field.id] = value;
+          updates.push({ id: field.id, value });
+          console.log("Matched field:", { fieldName, cleanedName: cleaned, sampleName: match.name, value });
+        }
+      });
+
+      console.log("Total matches found:", updates.length);
+
+      // Update UI instantly
+      setDraftValues(newDraftValues);
+
+      // Apply to actual PDF fields - use batch update
+      if (updates.length > 0) {
+        // Instead of calling onFieldUpdate multiple times, we'll trigger a single update
+        // that applies all changes at once for better performance
+        updates.forEach(({ id, value }) => {
+          console.log("Applying field update:", { id, value });
+          onFieldUpdate(id, value);
+        });
+      }
+
+      toast.success(`Sample data applied to ${updates.length} field${updates.length !== 1 ? "s" : ""}!`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load sample data");
+    } finally {
+      setIsLoadingSample(false);
+    }
+  };
+
   return (
     <>
-      <div
-        className={`
-          bg-card border-r border-border transition-all duration-300 flex flex-col
-          ${isOpen ? "w-80" : "w-0"}
-        `}
-      >
+      {/* Sidebar Panel */}
+      <div className={`bg-card border-r border-border transition-all duration-300 flex flex-col ${isOpen ? "w-80" : "w-0"}`}>
         {isOpen && (
           <div className="flex-1 overflow-y-auto p-6">
+            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Editor Panel</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggle}
-                className="hover:bg-secondary"
-              >
+              <Button variant="ghost" size="icon" onClick={onToggle}>
                 <ChevronRight className="w-5 h-5" />
               </Button>
             </div>
 
-            {/* Signature Upload Section */}
+            {/* Add Signature */}
             <Collapsible open={isSignatureOpen} onOpenChange={setIsSignatureOpen}>
               <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between p-3 h-auto hover:bg-accent/50"
-                >
+                <Button variant="ghost" className="w-full justify-between p-3 h-auto hover:bg-accent/50">
                   <div className="flex items-center gap-2">
                     <PenTool className="w-5 h-5 text-primary" />
                     <span className="font-medium">Add Signature</span>
                   </div>
-                  {isSignatureOpen ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
+                  {isSignatureOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </Button>
               </CollapsibleTrigger>
 
-              <CollapsibleContent className="px-4 py-3 space-y-3">
-                {/* Upload Option */}
-                <div className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary/50 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleSignatureUpload}
-                    className="hidden"
-                    id="signature-upload"
-                  />
-                  <label
-                    htmlFor="signature-upload"
-                    className="flex flex-col items-center gap-2 cursor-pointer"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Upload className="w-5 h-5 text-primary" />
+              <CollapsibleContent className="px-4 py-3 space-y-4">
+                {/* Upload */}
+                <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
+                  <input type="file" accept="image/*" onChange={handleSignatureUpload} className="hidden" id="sig-upload" />
+                  <label htmlFor="sig-upload" className="flex flex-col items-center gap-2 cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Upload className="w-6 h-6 text-primary" />
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      Upload image
-                    </span>
+                    <span className="text-sm">Upload signature image</span>
                   </label>
                 </div>
 
-                <div className="text-center text-xs text-muted-foreground">or</div>
+                <div className="text-center text-xs text-muted-foreground">or draw below</div>
 
-                {/* Draw Option */}
+                {/* Draw */}
                 <div className="space-y-2">
                   <Label className="text-xs">Draw Signature</Label>
                   <canvas
                     ref={canvasRef}
-                    width={256}
-                    height={120}
-                    className="border border-border rounded-lg bg-white w-full cursor-crosshair"
+                    width={280}
+                    height={140}
+                    className="border border-border rounded-lg bg-white w-full cursor-crosshair touch-none"
                     onMouseDown={startDrawing}
                     onMouseMove={draw}
                     onMouseUp={stopDrawing}
@@ -241,17 +309,10 @@ export const Sidebar = ({
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    onClick={handleSaveSignature}
-                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                  >
-                    Add
+                  <Button onClick={saveDrawnSignature} className="flex-1">
+                    Add Signature
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleClearSignature}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" onClick={clearCanvas} className="flex-1">
                     Clear
                   </Button>
                 </div>
@@ -260,123 +321,130 @@ export const Sidebar = ({
 
             <Separator className="my-4" />
 
-            {/* Add Text Section */}
+            {/* Add Text */}
             <Collapsible open={isTextOpen} onOpenChange={setIsTextOpen}>
               <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between p-3 h-auto hover:bg-accent/50"
-                >
+                <Button variant="ghost" className="w-full justify-between p-3 h-auto hover:bg-accent/50">
                   <div className="flex items-center gap-2">
                     <Type className="w-5 h-5 text-primary" />
                     <span className="font-medium">Add Text</span>
                   </div>
-                  {isTextOpen ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
+                  {isTextOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </Button>
               </CollapsibleTrigger>
 
               <CollapsibleContent className="px-4 py-3 space-y-3">
                 <div className="space-y-2">
-                  <Label htmlFor="text-input">Enter Text</Label>
+                  <Label>Text</Label>
                   <Textarea
-                    id="text-input"
-                    placeholder="Type your text here..."
+                    placeholder="Type anything..."
                     value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    className="min-h-[100px] resize-none"
-                    style={{ fontFamily: '"Courier New", monospace' }}
+                    onChange={e => setTextInput(e.target.value)}
+                    className="min-h-24 resize-none"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="font-size">Font Size</Label>
+                  <Label>Font Size</Label>
                   <Select value={fontSize} onValueChange={setFontSize}>
-                    <SelectTrigger id="font-size">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="10">10px</SelectItem>
-                      <SelectItem value="12">12px</SelectItem>
-                      <SelectItem value="14">14px</SelectItem>
-                      <SelectItem value="16">16px</SelectItem>
-                      <SelectItem value="18">18px</SelectItem>
-                      <SelectItem value="20">20px</SelectItem>
-                      <SelectItem value="24">24px</SelectItem>
-                      <SelectItem value="28">28px</SelectItem>
-                      <SelectItem value="32">32px</SelectItem>
+                      {[10, 12, 14, 16, 18, 20, 24, 28, 32].map(size => (
+                        <SelectItem key={size} value={String(size)}>{size}px</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    onClick={handleAddText}
-                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                  >
-                    Add Text
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setTextInput("")}
-                    className="flex-1"
-                  >
-                    Clear
-                  </Button>
+                  <Button onClick={handleAddText} className="flex-1">Add Text</Button>
+                  <Button variant="outline" onClick={() => setTextInput("")} className="flex-1">Clear</Button>
                 </div>
               </CollapsibleContent>
             </Collapsible>
 
             <Separator className="my-4" />
 
-            {/* Form Fields */}
+            {/* Load Sample Data Button */}
+            {formFields.length > 0 && (
+              <>
+                <Button
+                  onClick={handleLoadSampleData}
+                  disabled={isLoadingSample}
+                  className="w-full mb-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold shadow-md"
+                  size="sm"
+                >
+                  {isLoadingSample ? (
+                    <>Loading…</>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4 mr-2 animate-pulse" />
+                      Load Sample Data
+                    </>
+                  )}
+                </Button>
+                <Separator className="my-4" />
+              </>
+            )}
+
+            {/* Form Fields List */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-primary" />
-                  <Label className="text-sm font-medium">Form Fields</Label>
+                  <span className="font-medium">Form Fields</span>
                 </div>
                 {formFields.length > 0 && (
-                  <Button 
-                    size="sm" 
-                    onClick={handleApplyValues}
-                    className="h-8 gap-1.5"
-                  >
+                  <Button size="sm" onClick={handleApplyValues} className="gap-1">
                     <Check className="w-3.5 h-3.5" />
-                    Apply
+                    Apply All
                   </Button>
                 )}
               </div>
 
               {formFields.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No form fields detected in this PDF
-                </p>
+                <p className="text-sm text-muted-foreground">No form fields detected</p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {formFields
-                    .filter(field => !field.name.toLowerCase().includes('barcode') && field.type !== 'checkbox')
-                    .map((field) => (
-                      <div 
-                        key={field.id} 
+                    .filter(f => !f.name.toLowerCase().includes("barcode") && f.page === currentPage)
+                    .map(field => (
+                      <div
+                        key={field.id}
                         id={`field-${field.id}`}
-                        className={`space-y-2 p-3 rounded-lg transition-colors ${
-                          highlightedFieldId === field.id ? 'bg-primary/10 border-2 border-primary' : 'bg-transparent'
+                        className={`p-3 rounded-lg border transition-all ${
+                          highlightedFieldId === field.id
+                            ? "border-primary bg-primary/10 shadow-sm"
+                            : "border-transparent"
                         }`}
                       >
-                        <Label className="text-sm font-medium">
+                        <Label className="text-sm">
                           {cleanFieldName(field.name)}
-                          {field.maxLength && <span className="text-muted-foreground ml-1">({field.maxLength} chars)</span>}
+                          {field.maxLength && (
+                            <span className="text-muted-foreground ml-1">({field.maxLength})</span>
+                          )}
                         </Label>
-                        <Input
-                          value={draftValues[field.id] || ""}
-                          onChange={(e) => handleDraftChange(field.id, e.target.value)}
-                          maxLength={field.maxLength}
-                          className="h-9"
-                        />
+                        {field.type === "checkbox" ? (
+                          <div className="flex items-center gap-2 mt-2">
+                            <input
+                              type="checkbox"
+                              checked={draftValues[field.id] === "true"}
+                              onChange={e => handleDraftChange(field.id, e.target.checked ? "true" : "false")}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                            <span className="text-sm">{draftValues[field.id] === "true" ? "Checked" : "Unchecked"}</span>
+                          </div>
+                        ) : (
+                          <Input
+                            value={draftValues[field.id] ?? ""}
+                            onChange={e => handleDraftChange(field.id, e.target.value)}
+                            maxLength={field.maxLength}
+                            className="mt-1 h-9"
+                            placeholder={`Enter ${cleanFieldName(field.name).toLowerCase()}`}
+                          />
+                        )}
                       </div>
                     ))}
                 </div>
@@ -386,6 +454,7 @@ export const Sidebar = ({
         )}
       </div>
 
+      {/* Collapsed Toggle Button */}
       {!isOpen && (
         <Button
           variant="ghost"

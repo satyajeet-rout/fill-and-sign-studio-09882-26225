@@ -205,6 +205,121 @@ export async function savePDF(
   }
 }
 
+// Export a filled PDF as a Blob (without triggering a download)
+export async function exportFilledPdf(
+  originalFile: File,
+  formFields: FormField[],
+  signatures: Signature[],
+  textAnnotations: TextAnnotation[] = []
+): Promise<Blob> {
+  try {
+    const arrayBuffer = await originalFile.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer, {
+      ignoreEncryption: true,
+      throwOnInvalidObject: false,
+    });
+
+    const pages = pdfDoc.getPages();
+    const form = pdfDoc.getForm();
+    const font = await pdfDoc.embedFont(StandardFonts.Courier);
+
+    // Fill fields (similar to savePDF)
+    for (const field of formFields) {
+      try {
+        const pdfField = form.getFields().find(f => f.getName() === field.name);
+        if (pdfField && field.value) {
+          if (field.type === "text") {
+            (pdfField as any).setText?.(field.value);
+          } else if (field.type === "checkbox") {
+            if (field.value === "true") {
+              (pdfField as any).check?.();
+            } else {
+              (pdfField as any).uncheck?.();
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error filling field ${field.name}:`, error);
+      }
+    }
+
+    // Signatures
+    for (const signature of signatures) {
+      const page = pages[signature.page - 1];
+      const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
+      try {
+        const imageData = signature.image.split(",")[1];
+        const imageBytes = Uint8Array.from(atob(imageData), (c) => c.charCodeAt(0));
+        let image;
+        if (signature.image.includes("image/png")) {
+          image = await pdfDoc.embedPng(imageBytes);
+        } else if (signature.image.includes("image/jpeg") || signature.image.includes("image/jpg")) {
+          image = await pdfDoc.embedJpg(imageBytes);
+        } else {
+          continue;
+        }
+
+        const scaleX = signature.pageWidth ? pdfPageWidth / signature.pageWidth : 1;
+        const scaleY = signature.pageHeight ? pdfPageHeight / signature.pageHeight : 1;
+        const pdfX = signature.x * scaleX;
+        const pdfY = signature.y * scaleY;
+        const pdfWidth = signature.width * scaleX;
+        const pdfHeight = signature.height * scaleY;
+
+        page.drawImage(image, {
+          x: pdfX,
+          y: pdfPageHeight - pdfY - pdfHeight,
+          width: pdfWidth,
+          height: pdfHeight,
+        });
+      } catch (error) {
+        console.error("Failed to embed signature:", error);
+      }
+    }
+
+    // Text annotations
+    for (const textAnnotation of textAnnotations) {
+      const page = pages[textAnnotation.page - 1];
+      const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
+      try {
+        const scaleX = textAnnotation.pageWidth ? pdfPageWidth / textAnnotation.pageWidth : 1;
+        const scaleY = textAnnotation.pageHeight ? pdfPageHeight / textAnnotation.pageHeight : 1;
+        const pdfX = textAnnotation.x * scaleX;
+        const pdfY = textAnnotation.y * scaleY;
+        const pdfFontSize = textAnnotation.fontSize * scaleY;
+
+        const lines = textAnnotation.text.split('\n');
+        const lineHeight = pdfFontSize * 1.2;
+        lines.forEach((line, index) => {
+          page.drawText(line, {
+            x: pdfX + 5 * scaleX,
+            y: pdfPageHeight - pdfY - (index + 1) * lineHeight - 5 * scaleY,
+            size: pdfFontSize,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+        });
+      } catch (error) {
+        console.error("Failed to add text annotation:", error);
+      }
+    }
+
+    try {
+      form.updateFieldAppearances();
+      form.flatten();
+    } catch (error) {
+      console.warn("Could not flatten form:", error);
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+    return blob;
+  } catch (error) {
+    console.error("exportFilledPdf error:", error);
+    throw error;
+  }
+}
+
 // Alternative save method using canvas rendering
 async function savePDFAlternativeMethod(
   originalFile: File,

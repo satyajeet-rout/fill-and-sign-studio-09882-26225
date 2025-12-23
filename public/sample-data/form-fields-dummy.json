@@ -1,0 +1,124 @@
+{
+  "formFields": [
+    {
+      "name": "fullName",
+      "label": "Full Name",
+      "value": "Rajesh Kumar Patel",
+      "type": "text"
+    },
+    {
+      "name": "dateOfBirth",
+      "label": "Date of Birth",
+      "value": "03/15/1985",
+      "type": "text"
+    },
+    {
+      "name": "passportNumber",
+      "label": "Passport Number",
+      "value": "N12345678",
+      "type": "text"
+    },
+    {
+      "name": "citizenship",
+      "label": "Country of Citizenship",
+      "value": "India",
+      "type": "text"
+    },
+    {
+      "name": "address",
+      "label": "Current Address",
+      "value": "123 Innovation Drive, San Francisco, CA 94105, USA",
+      "type": "text"
+    },
+    {
+      "name": "phone",
+      "label": "Phone Number",
+      "value": "+1-415-555-0123",
+      "type": "text"
+    },
+    {
+      "name": "email",
+      "label": "Email Address",
+      "value": "rajesh.patel@example.com",
+      "type": "text"
+    },
+    {
+      "name": "education",
+      "label": "Highest Education",
+      "value": "Doctorate (Ph.D.)",
+      "type": "text"
+    },
+    {
+      "name": "university",
+      "label": "University Name",
+      "value": "Stanford University",
+      "type": "text"
+    },
+    {
+      "name": "graduationYear",
+      "label": "Graduation Year",
+      "value": "2012",
+      "type": "text"
+    },
+    {
+      "name": "currentEmployer",
+      "label": "Current Employer",
+      "value": "Google LLC",
+      "type": "text"
+    },
+    {
+      "name": "jobTitle",
+      "label": "Job Title",
+      "value": "Senior AI Research Engineer",
+      "type": "text"
+    },
+    {
+      "name": "yearsExperience",
+      "label": "Years of Experience",
+      "value": "14",
+      "type": "text"
+    },
+    {
+      "name": "salary",
+      "label": "Annual Salary (USD)",
+      "value": "350000",
+      "type": "text"
+    },
+    {
+      "name": "publications",
+      "label": "Number of Publications",
+      "value": "24",
+      "type": "text"
+    },
+    {
+      "name": "citations",
+      "label": "Total Citations",
+      "value": "3200",
+      "type": "text"
+    },
+    {
+      "name": "patents",
+      "label": "Number of Patents",
+      "value": "5",
+      "type": "text"
+    },
+    {
+      "name": "awards",
+      "label": "Major Awards",
+      "value": "ACM Fellow; IEEE Fellow; NSF CAREER Award",
+      "type": "text"
+    },
+    {
+      "name": "memberships",
+      "label": "Professional Memberships",
+      "value": "Association for Computing Machinery (ACM), Institute of Electrical and Electronics Engineers (IEEE)",
+      "type": "text"
+    },
+    {
+      "name": "mediaFeatures",
+      "label": "Media Features/Press",
+      "value": "Forbes, TechCrunch, MIT Technology Review",
+      "type": "text"
+    }
+  ]
+}
